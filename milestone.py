@@ -38,7 +38,7 @@ plt.gca().set_ylim([0, 1.2 * np.max(peak_Ls)])
 #print(redshift)
 #print(m_effective)
 print(near_redshift)
-#print(near_m_effective)
+print(near_m_effective)
 print(get_band_pass(near_m_effective, near_redshift))
 print(get_near_d_L(near_redshift))
 
