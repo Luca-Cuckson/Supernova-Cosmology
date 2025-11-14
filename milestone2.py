@@ -119,17 +119,17 @@ ys = find_theoretical_m_eff(smooth_x, popt2)
 far_smooth_x = np.linspace(min(far_redshift), max(far_redshift), 1000)
 far_ys = find_theoretical_m_eff(far_smooth_x, popt2)
 
-fig1, (ax1, ax2) = plt.subplots(2, 1, sharex='col', height_ratios=(4,1))
-ax1.errorbar(far_redshift, far_m_effective, yerr=far_m_error, marker='o', color = 'r', elinewidth=0.8, linestyle='none', ms = 2)
-ax1.errorbar(near_redshift, near_m_effective, yerr = near_m_error, marker='s', color = 'orange', elinewidth=0.8, linestyle='none', ms = 2)
-ax1.plot(smooth_x, ys, color = 'g', linewidth = 0.8)
-ax2.set_xlabel('$Redshift (z)$')
-ax1.set_ylabel('$M_{eff}$')
+#fig1, (ax1, ax2) = plt.subplots(2, 1, sharex='col', height_ratios=(4,1))
+#ax1.errorbar(far_redshift, far_m_effective, yerr=far_m_error, marker='o', color = 'r', elinewidth=0.8, linestyle='none', ms = 2)
+#ax1.errorbar(near_redshift, near_m_effective, yerr = near_m_error, marker='s', color = 'orange', elinewidth=0.8, linestyle='none', ms = 2)
+#ax1.plot(smooth_x, ys, color = 'g', linewidth = 0.8)
+#ax2.set_xlabel('$Redshift (z)$')
+#ax1.set_ylabel('$M_{eff}$')
 
 #fig2, ax2 = plt.subplots()
-ax2.scatter(far_redshift, far_norm_residuals, marker='.')
-ax2.axhline(y=0, color='k', linestyle=':', alpha=0.25)
-ax2.set_ylim([-5,5])
+#ax2.scatter(far_redshift, far_norm_residuals, marker='.')
+#ax2.axhline(y=0, color='k', linestyle=':', alpha=0.25)
+#ax2.set_ylim([-5,5])
 
 
 #fig3, ax3 = plt.subplots()
@@ -141,7 +141,7 @@ ax2.set_ylim([-5,5])
 
 #######################################################################################################################################
 # Poster Plots
-
+plt.rcParams["font.size"] = 18
 # Main plot
 fig6 = plt.figure(6).add_axes((0.1,0.32,0.74,0.68))
 plt.errorbar(far_redshift, far_m_effective, yerr=far_m_error, marker='o', color = 'k', elinewidth=1, ecolor='gray', linestyle='none', ms = 3)
@@ -150,6 +150,10 @@ plt.plot(far_smooth_x, far_ys, color = 'r', linewidth = 0.8)
 plt.ylabel('$M_{eff}$')
 plt.tick_params(axis='x', bottom=False, top=False, labelbottom=False)
 plt.xlim([0.1, 0.86])
+
+plt.text(0.5, 21, '$\chi^2_{min}=81.6$')
+plt.text(0.5, 20.5, 'DoF = 41')
+plt.text(0.5, 20, '$\chi^2_{reduced}=1.99$')
 
 # Residuals
 plt.figure(6).add_axes((0.1, 0.1, 0.74, 0.2))
@@ -169,6 +173,10 @@ plt.axhline(y=1, color='k', linestyle=':', alpha=0.3)
 plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
 plt.plot(stats.norm.pdf(far_gauss_xs, far_norm_res_mean, far_norm_res_std), far_gauss_xs, color='k')
 plt.tick_params(axis='y', left=False, right=False, labelleft=False)
+plt.xticks([0.2, 0.4])
+
+plt.savefig('poster_plot', bbox_inches = 'tight')
+
 
 
 #######################################################################################################################################
@@ -192,14 +200,19 @@ for i in range(0, len(chi_squared_L)):
     chi_squareds1.append(chi_squared(chi_squared_L[i], find_milestone_value, near_redshift, near_m_effective, near_m_error))
 
 fig5, ax5 = plt.subplots()
-ax5.plot(chi_squared_L/H_0**2, chi_squareds1, color='r') # watch out as I've changed the axis to be L, not L*H_0^2
-ax5.axvline(x=popt1/H_0**2, color='k', linestyle = 'dashed', alpha=0.5)
-ax5.axvline(x=(popt1+popt1_err)/H_0**2, color='k', linestyle=':', alpha=0.3)
-ax5.axvline(x=(popt1-popt1_err)/H_0**2, color='k', linestyle=':', alpha=0.3)
+ax5.plot(chi_squared_L/(H_0**2*10**32), chi_squareds1, color='r') # watch out as I've changed the axis to be L, not L*H_0^2
+ax5.axvline(x=popt1/(H_0**2*10**32), color='k', linestyle = 'dashed', alpha=0.5)
+ax5.axvline(x=(popt1+popt1_err)/(H_0**2*10**32), color='k', linestyle=':', alpha=0.3)
+ax5.axvline(x=(popt1-popt1_err)/(H_0**2*10**32), color='k', linestyle=':', alpha=0.3)
 ax5.axhline(y=chi_squared_min_LH_0, color='k', linestyle='dashed', alpha=0.5)
 ax5.axhline(y=chi_squared_min_LH_0+1, color='k', linestyle=':', alpha=0.3)
-ax5.set_xlabel('$L_{\lambda, peak}\ [W\ \AA^{-1}] $')
+ax5.set_xlabel('$L_{\lambda, peak}\ [10^{32}\ W\ \AA^{-1}] $')
 ax5.set_ylabel('$\chi ^2$')
+
+plt.text(3.1, 37.5, '$\chi^2_{min}=23.8$')
+plt.text(3.1, 36.25, 'DoF = 17')
+plt.text(3.1, 35, '$\chi^2_{reduced}=1.40$')
+plt.savefig('L_chi^2', bbox_inches = 'tight')
 
 
 #######################################################################################################################################
