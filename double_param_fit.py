@@ -48,6 +48,8 @@ popt_err = np.sqrt(np.diag(cov)) # double check this
 
 print('Omega_Lambda_0 = ({} \u00B1 {})'.format(popt[0], popt_err[0]))
 print('L_Lambda_peak * H_0^2 = ({} \u00B1 {})'.format(popt[1], popt_err[1]))
+L_lambda_peak, L_lambda_peak_err = popt[1] / H_0**2, popt_err[1] / H_0**2
+print('L_lambda_peak = ({} \u00B1 {})'.format(L_lambda_peak, L_lambda_peak_err))
 
 
 #######################################################################################################################################
