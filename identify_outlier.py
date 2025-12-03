@@ -14,13 +14,20 @@ H_0 = (75*1000)/(3.09*10**22) #s^-1
 file = 'sn_data(1).txt'
 redshift, m_effective, m_error = np.loadtxt(file, usecols=(1,2,3), unpack=True)
 
+# removing the outlier
+redshift = np.delete(redshift, 31)
+m_effective = np.delete(m_effective, 31)
+m_error = np.delete(m_error, 31)
+
+
 # taking only low redshift data
-near_redshift = redshift[42:60]
-near_m_effective = m_effective[42:60]
-near_m_error = m_error[42:60]
-far_redshift = redshift[0:42]
-far_m_effective = m_effective[0:42]
-far_m_error = m_error[0:42]
+near_redshift = redshift[41:59]
+near_m_effective = m_effective[41:59]
+near_m_error = m_error[41:59]
+far_redshift = redshift[0:41]
+far_m_effective = m_effective[0:41]
+far_m_error = m_error[0:41]
+
 
 
 #######################################################################################################################################
@@ -58,9 +65,17 @@ print('L_lambda_peak = ({} \u00B1 {})'.format(L_lambda_peak, L_lambda_peak_err))
 residuals = m_effective - find_theoretical_m_eff(redshift, *popt)
 norm_residuals = residuals / m_error
 
-gauss_xs = np.linspace(-5.5, 5.5, 1000)
+for i in range(len(norm_residuals)):
+    if norm_residuals[i]>3: 
+        print(i)
+        print(norm_residuals[i])
+
+
+
+gauss_xs = np.linspace(-3, 3, 1000)
 norm_res_mean = np.mean(norm_residuals)
 norm_res_std = np.std(norm_residuals)
+
 
 
 # chi-squared time!!!!!
@@ -81,25 +96,7 @@ print('Reduced chi^2 = {}'.format(chi_squared_min/degrees_of_freedom_value))
 smooth_x = np.linspace(min(redshift), max(redshift), 1000)
 ys = find_theoretical_m_eff(smooth_x, *popt)
 
-#fig1, (ax1, ax2) = plt.subplots(2, 1, sharex='col', height_ratios=(4,1))
-#ax1.errorbar(far_redshift, far_m_effective, yerr=far_m_error, marker='o', color = 'r', elinewidth=0.8, linestyle='none', ms = 2)
-#ax1.errorbar(near_redshift, near_m_effective, yerr = near_m_error, marker='s', color = 'orange', elinewidth=0.8, linestyle='none', ms = 2)
-#ax1.plot(smooth_x, ys, color = 'g', linewidth = 0.8)
-#ax2.set_xlabel('$Redshift (z)$')
-#ax1.set_ylabel('$M_{eff}$')
-
-#fig2, ax2 = plt.subplots()
-#ax2.scatter(redshift, norm_residuals, marker='.')
-#ax2.axhline(y=0, color='k')
-#ax2.set_ylim([-5,5])
-
-#fig3, ax3 = plt.subplots()
-#ax3.hist(norm_residuals, bins = 15, density=True)
-#ax3.axvline(x=1, color='k', linestyle=':', alpha=0.5)
-#ax3.axvline(x=-1, color='k', linestyle=':', alpha=0.5)
-#ax3.plot(gauss_xs, stats.norm.pdf(gauss_xs, norm_res_mean, norm_res_std))
-
-plt.rcParams["font.size"] = 16
+plt.rcParams["font.size"] = 18
 # Main plot
 fig6 = plt.figure(6).add_axes((0.1,0.32,0.74,0.68))
 plt.errorbar(redshift, m_effective, yerr=m_error, marker='o', color = 'k', elinewidth=1, ecolor='gray', linestyle='none', ms = 2)
@@ -120,7 +117,7 @@ plt.axhline(y=0, color='k', linestyle = 'dashed', alpha=0.5)
 plt.axhline(y=1, color='k', linestyle=':', alpha=0.3)
 plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
 plt.xlabel('$Redshift (z)$')
-plt.ylim([-5.5,5.5])
+plt.ylim([-3,3])
 plt.xlim([0, 0.86])
 
 # Residuals histrogram
@@ -133,6 +130,6 @@ plt.plot(stats.norm.pdf(gauss_xs, norm_res_mean, norm_res_std), gauss_xs, color=
 plt.tick_params(axis='y', left=False, right=False, labelleft=False)
 plt.xticks([0.2, 0.4])
 
-plt.savefig('double_fit', bbox_inches = 'tight')
+plt.savefig('outlier_removed', bbox_inches = 'tight')
 
 plt.show()
