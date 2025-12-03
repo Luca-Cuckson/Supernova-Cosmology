@@ -1,8 +1,6 @@
-print('hello world')
-print("change")
-print("I'm testing")
+import numpy as np
 
-def square(x):
-    return x ** 2
+a = np.array([1,2,3,4,5,6,7,8,9])
 
-print(square(4))
+a = np.delete(a, 3)
+print(a)
