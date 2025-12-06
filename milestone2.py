@@ -28,12 +28,12 @@ far_m_error = m_error[0:42]
 
 # find d_L for nearby supernovae
 def get_near_d_L(z):
-    return c * z / (H_0*1000 * (1+z)) # output in Mpc
+    return c * z / (H_0*1000) * (1+z) # output in Mpc
 
 # find L_lambda_peak * H_0^2 from redshift for nearby supernovae
 def find_milestone_value(redshift, value):
     redshift = np.array(redshift)
-    frac = value / (f_lambda_0 * 4 * np.pi * c**2 * redshift**2)
+    frac = value / (f_lambda_0 * 4 * np.pi * c**2 * redshift**2 * (1+redshift)**2)
     m_eff = -2.5 * np.log10(frac)
     return m_eff
 
