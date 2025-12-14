@@ -64,7 +64,7 @@ def find_theoretical_m_eff(redshift, Omega):
     return m_eff
 
 # optimise to find value of Omega
-popt2, cov2 = scipy.optimize.curve_fit(find_theoretical_m_eff, far_redshift, far_m_effective, sigma = far_m_error, absolute_sigma=True, p0=np.array([0.685]), check_finite=True)
+popt2, cov2 = scipy.optimize.curve_fit(find_theoretical_m_eff, redshift, m_effective, sigma = m_error, absolute_sigma=True, p0=np.array([0.685]), check_finite=True)
 popt2_err = np.sqrt(np.diag(cov2)) # double check this
 
 print('Omega_Lambda_0 = ({} \u00B1 {})'.format(popt2[0], popt2_err[0]))
@@ -75,12 +75,12 @@ print('Omega_Lambda_0 = ({} \u00B1 {})'.format(popt2[0], popt2_err[0]))
 
 # You've plotted residuals of the near redshift stuff to the far redshift function you silly goose
 # calculate residuals
-far_residuals = far_m_effective - find_theoretical_m_eff(far_redshift, popt2)
-far_norm_residuals = far_residuals / far_m_error
+residuals = m_effective - find_theoretical_m_eff(redshift, popt2)
+norm_residuals = residuals / m_error
 
-far_gauss_xs = np.linspace(-3, 5, 1000)
-far_norm_res_mean = np.mean(far_norm_residuals)
-far_norm_res_std = np.std(far_norm_residuals)
+gauss_xs = np.linspace(-5, 5, 1000)
+norm_res_mean = np.mean(norm_residuals)
+norm_res_std = np.std(norm_residuals)
 
 
 #######################################################################################################################################
@@ -103,14 +103,14 @@ print(chi_squared(popt1-popt1_err, find_milestone_value, near_redshift, near_m_e
 
 #-------------------------------------------------------------------------------------------------------------------
 
-chi_squared_min_Omega = chi_squared(popt2, find_theoretical_m_eff, far_redshift, far_m_effective, far_m_error)
+chi_squared_min_Omega = chi_squared(popt2, find_theoretical_m_eff, redshift, m_effective, m_error)
 print('Omega min chi^2 = {}'.format(chi_squared_min_Omega))
-degrees_of_freedom_Omega = far_redshift.size - popt2.size
+degrees_of_freedom_Omega = redshift.size - popt2.size
 print('Omega reduced chi^2 = {}'.format(chi_squared_min_Omega/degrees_of_freedom_Omega))
 print('Omega DoF = {}'.format(degrees_of_freedom_Omega))
 
-print(chi_squared(popt2+popt2_err, find_theoretical_m_eff, far_redshift, far_m_effective, far_m_error))
-print(chi_squared(popt2-popt2_err, find_theoretical_m_eff, far_redshift, far_m_effective, far_m_error))
+print(chi_squared(popt2+popt2_err, find_theoretical_m_eff, redshift, m_effective, m_error))
+print(chi_squared(popt2-popt2_err, find_theoretical_m_eff, redshift, m_effective, m_error))
 
 
 
@@ -145,41 +145,37 @@ far_ys = find_theoretical_m_eff(far_smooth_x, popt2)
 
 #######################################################################################################################################
 # Poster Plots
-plt.rcParams["font.size"] = 15
+plt.rcParams["font.size"] = 18
 # Main plot
-fig6 = plt.figure(6).add_axes((0.1,0.27,0.74,0.44))
-plt.errorbar(far_redshift, far_m_effective, yerr=far_m_error, marker='o', color = 'k', elinewidth=1, ecolor='gray', linestyle='none', ms = 3)
-plt.errorbar(redshift[31], m_effective[31], yerr=m_error[31], marker='o', color = "#B134F4", elinewidth=1, ecolor='gray', linestyle='none', ms = 3)
+fig6 = plt.figure(6).add_axes((0.1,0.32,0.74,0.68))
+plt.errorbar(redshift, m_effective, yerr=m_error, marker='o', color = 'k', elinewidth=1, ecolor='gray', linestyle='none', ms = 3)
 #plt.errorbar(near_redshift, near_m_effective, yerr = near_m_error, marker='s', color = 'orange', elinewidth=0.8, linestyle='none', ms = 2)
-plt.plot(far_smooth_x, far_ys, color = "#7ABEF6", linewidth = 1.4)
-plt.ylabel('$m_{eff}$')
+plt.plot(smooth_x, ys, color = 'r', linewidth = 0.8)
+plt.ylabel('$M_{eff}$')
 plt.tick_params(axis='x', bottom=False, top=False, labelbottom=False)
-plt.xlim([0.1, 0.86])
-plt.yticks([20,21,22,23,24,25])
+plt.xlim([0, 0.86])
 
-plt.text(0.5, 21.4, '$\chi^2_{min}=81.3$')
-plt.text(0.5, 20.7, 'DoF = 41')
-plt.text(0.5, 20.05, '$\chi^2_{reduced}=1.98$')
+plt.text(0.5, 21, '$\chi^2_{min}=81.3$')
+plt.text(0.5, 20.5, 'DoF = 41')
+plt.text(0.5, 20, '$\chi^2_{reduced}=1.98$')
 
 # Residuals
-plt.figure(6).add_axes((0.1, 0.1, 0.74, 0.15))
-plt.scatter(far_redshift, far_norm_residuals, color = 'k', marker='o', s=6)
-plt.scatter(redshift[31], far_norm_residuals[31], color="#B134F4", marker='o', s=6)
-plt.axhline(y=0, color='k', linestyle = 'dashed', alpha=0.6)
-plt.axhline(y=1, color='k', linestyle=':', alpha=0.5)
-plt.axhline(y=-1, color='k', linestyle=':', alpha=0.5)
+plt.figure(6).add_axes((0.1, 0.1, 0.74, 0.2))
+plt.scatter(redshift, norm_residuals, color = 'r', marker='o', s=4)
+plt.axhline(y=0, color='k', linestyle = 'dashed', alpha=0.5)
+plt.axhline(y=1, color='k', linestyle=':', alpha=0.3)
+plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
 plt.xlabel('$Redshift (z)$')
-plt.ylim([-3.5,5.5])
-plt.xlim([0.1, 0.86])
-plt.yticks([-3, 0, 5])
+plt.ylim([-5.5,5.5])
+plt.xlim([0, 0.86])
 
 # Residuals histrogram
-plt.figure(6).add_axes((0.85, 0.1, 0.14, 0.15))
-plt.hist(far_norm_residuals, bins = 12, orientation='horizontal', density=True, color='#7ABEF6')
-plt.axhline(y=0, color='k', linestyle = 'dashed', alpha=0.6)
-plt.axhline(y=1, color='k', linestyle=':', alpha=0.5)
-plt.axhline(y=-1, color='k', linestyle=':', alpha=0.5)
-plt.plot(stats.norm.pdf(far_gauss_xs, far_norm_res_mean, far_norm_res_std), far_gauss_xs, color='k')
+plt.figure(6).add_axes((0.85, 0.1, 0.14, 0.2))
+plt.hist(norm_residuals, bins = 12, orientation='horizontal', density=True, color='r')
+plt.axhline(y=0, color='k', linestyle = 'dashed', alpha=0.5)
+plt.axhline(y=1, color='k', linestyle=':', alpha=0.3)
+plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
+plt.plot(stats.norm.pdf(gauss_xs, norm_res_mean, norm_res_std), gauss_xs, color='k')
 plt.tick_params(axis='y', left=False, right=False, labelleft=False)
 plt.xticks([0.2, 0.4])
 
@@ -208,12 +204,12 @@ for i in range(0, len(chi_squared_L)):
     chi_squareds1.append(chi_squared(chi_squared_L[i], find_milestone_value, near_redshift, near_m_effective, near_m_error))
 
 fig5, ax5 = plt.subplots()
-ax5.plot(chi_squared_L/(H_0**2*10**32), chi_squareds1, color='#7ABEF6') # watch out as I've changed the axis to be L, not L*H_0^2
-ax5.axvline(x=popt1/(H_0**2*10**32), color='k', linestyle = 'dashed', alpha=0.6)
-ax5.axvline(x=(popt1+popt1_err)/(H_0**2*10**32), color='k', linestyle=':', alpha=0.5)
-ax5.axvline(x=(popt1-popt1_err)/(H_0**2*10**32), color='k', linestyle=':', alpha=0.5)
-ax5.axhline(y=chi_squared_min_LH_0, color='k', linestyle='dashed', alpha=0.6)
-ax5.axhline(y=chi_squared_min_LH_0+1, color='k', linestyle=':', alpha=0.5)
+ax5.plot(chi_squared_L/(H_0**2*10**32), chi_squareds1, color='r') # watch out as I've changed the axis to be L, not L*H_0^2
+ax5.axvline(x=popt1/(H_0**2*10**32), color='k', linestyle = 'dashed', alpha=0.5)
+ax5.axvline(x=(popt1+popt1_err)/(H_0**2*10**32), color='k', linestyle=':', alpha=0.3)
+ax5.axvline(x=(popt1-popt1_err)/(H_0**2*10**32), color='k', linestyle=':', alpha=0.3)
+ax5.axhline(y=chi_squared_min_LH_0, color='k', linestyle='dashed', alpha=0.5)
+ax5.axhline(y=chi_squared_min_LH_0+1, color='k', linestyle=':', alpha=0.3)
 ax5.set_xlabel('$L_{\lambda, peak}\ [10^{32}\ W\ \AA^{-1}] $')
 ax5.set_ylabel('$\chi ^2$')
 
