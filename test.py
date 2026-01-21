@@ -1,6 +1,5 @@
 import numpy as np
 
-a = np.array([1,2,3,4,5,6,7,8,9])
+print(np.ones((2,3,4)))
 
-a = np.delete(a, 3)
-print(a)
+print(np.average(np.ones((2,3,4))))

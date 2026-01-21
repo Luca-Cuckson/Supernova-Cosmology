@@ -121,7 +121,9 @@ ax[1].set_xlabel('L_lambda,peak * H_0^2')
 ax[0].hist(bchain[:,0], bins = 30);
 ax[1].hist(bchain[:,1], bins = 30);
 print('Omega_Lambda: ',round(np.median(bchain[:,0]), 3), '+/-', round(np.std(bchain[:,0]),3))
+print('Omega_Lambda: ',round(np.mean(bchain[:,0]), 3), '+/-', round(np.std(bchain[:,0]),3))
 print('L_lambda,peak * H_0^2: ',round(np.median(bchain[:,1]), 6), '+/-', round(np.std(bchain[:,1]),6))
+print('L_lambda,peak * H_0^2: ',round(np.mean(bchain[:,1]), 6), '+/-', round(np.std(bchain[:,1]),6))
 
 
 
@@ -139,8 +141,10 @@ plt.show()
 
 
 
-best = np.argmax(all_log_likelihoods)
+best = np.argmax(all_log_likelihoods) #very confused by this bad boy when there's median and std above
 bestpar = chain[best,:]
+
+
 
 smooth_x = np.linspace(min(z), max(z), 1000)
 ys = find_theoretical_m_eff(smooth_x, *bestpar)
