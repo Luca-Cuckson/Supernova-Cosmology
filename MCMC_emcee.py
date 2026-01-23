@@ -42,15 +42,6 @@ def chi_squared(model_params, model, x_data, y_data, y_err):
 #######################################################################################################################################
 # MCMC
 
-#number of parameters
-npar = 2
-#number of steps
-nsteps = 2000
-p0 = np.array([0.68, 0.0019])
-nwalkers = 11
-
-
-stepwidth = np.array([0.06, 0.00007]) #hopefully can figure this one out
 
 #find log of likelihood, p0 is initial parameters
 def log_likelihood(p0, z, m_eff, m_err):
@@ -70,52 +61,131 @@ def lnprob(theta, x, y, yerr):
     return lp + log_likelihood(theta, x, y, yerr)
 
 
-#starting_guesses = np.random.randn(nwalkers, npar)
-starting_guesses = np.array([0.6, 0.0001] * nwalkers)
+#######################################################################################################################################
+# Running the MCMC
+
+
+npar = 2 #number of parameters
+nsteps = 3000
+p0 = np.array([0.68, 0.0019]) #chi-squared best-fit
+nwalkers = 100
+stepwidth = np.array([0.06, 0.00007]) #hopefully can figure this one out
+
+starting_guesses = p0 + stepwidth * np.random.randn(nwalkers, npar) #have different starting pos. for each walker
 
 
 sampler = emcee.EnsembleSampler(nwalkers, npar, lnprob, args=(z, m_eff, m_err))
 
-sampler.run_mcmc(starting_guesses, 5000, progress=True)
+pos, prob, state = sampler.run_mcmc(starting_guesses, nsteps, progress=True)
+
+
+#######################################################################################################################################
+# Plotting the results
+
+samples = sampler.flatchain
+print(samples)
 
 fig, axes = plt.subplots(2, figsize=(10, 7), sharex=True)
 chain = sampler.get_chain()
+print(chain)
+Omega_chain = chain[:,:,0] #now have array of arrays of values for all walkers at each step
+print(Omega_chain)
+print(chain[:,:,1])
+
+def walker_plot(all_walker_chains):
+    fig, ax = plt.subplots(1, npar)
+    Omega_chain = all_walker_chains[:,:,0]
+    value_chain = all_walker_chains[:,:,1]
+    ax = axes[0]
+    ax.set_ylim(0.2,1)
+    for i in range(nwalkers):
+        path = Omega_chain[:,i]
+        ax.plot(path)
+        ax.set_ylabel("Omega_Lambda")
+    ax = axes[1]
+    for i in range(nwalkers):
+        path = value_chain[:,i]
+        ax.plot(path)
+        ax.set_ylabel("LHH")
 
 
-fig, ax = plt.subplots(1,2,figsize=(16, 8))
-ax[0].set_ylabel('Omega_Lambda')
-ax[0].set_xlabel('Step')
-ax[1].set_ylabel('L_lambda,peak * H_0^2')
-ax[1].set_xlabel('Step')
-ax[0].plot(chain[:,0]);
-ax[1].plot(chain[:,1]);
+walker_plot(chain)
+
+fig1, ax1 = plt.subplots(npar,1)
+ax1 = axes[0]
+ax1.hist(Omega_chain)
+
+#def get_walkers_means(chain):
+#    Omega_chain = chain[:,:,0]
+#    value_chain = chain[:,:,1]
+#    means = np.empty((nwalkers,npar))
+#    for i in range(nwalkers):
+#        Omega_path = Omega_chain[:,i]
+#        value_path = value_chain[:,i]
+#        means[i,0] = np.mean(Omega_path)
+#        means[i,1] = np.mean(value_path)
+#    return means
+
+#print(get_walkers_means(chain))
 
 
-bchain = chain[200:,:] #let's set burn-in to 100 for now
-
-fig, ax = plt.subplots(1,2,figsize=(16, 8))
-ax[0].set_ylabel('Number of samples')
-ax[0].set_xlabel('Omega_Lambda')
-ax[1].set_ylabel('Number of samples')
-ax[1].set_xlabel('L_lambda,peak * H_0^2')
-ax[0].hist(bchain[:,0], bins = 30);
-ax[1].hist(bchain[:,1], bins = 30);
-print('Omega_Lambda: ',round(np.median(bchain[:,0]), 3), '+/-', round(np.std(bchain[:,0]),3))
-print('Omega_Lambda: ',round(np.mean(bchain[:,0]), 3), '+/-', round(np.std(bchain[:,0]),3))
-print('L_lambda,peak * H_0^2: ',round(np.median(bchain[:,1]), 6), '+/-', round(np.std(bchain[:,1]),6))
-print('L_lambda,peak * H_0^2: ',round(np.mean(bchain[:,1]), 6), '+/-', round(np.std(bchain[:,1]),6))
+def get_values(chain):
+    Omega_chain = chain[:,:,0]
+    value_chain = chain[:,:,1]
+    print('Omega_Lambda_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
+    print('LHH = ({} \u00B1 {})'.format(np.mean(value_chain), np.std(value_chain)))
+    return np.mean(Omega_chain), np.mean(value_chain)
 
 
 
-fig, ax = plt.subplots(figsize=(16, 8))
-plt.plot(bchain[:,0], bchain[:,1], 'o',alpha = .1, markersize = 10, markeredgewidth=0, label= 'MCMC Samples')
-ax.set_ylabel('L_lambda,peak * H_0^2')
-ax.set_xlabel('Omega_Lambda')
-l=ax.legend()
+Omega_Lambda, LHH = get_values(chain)
 
 
-import corner
-#corner.corner(bchain,labels=['Omega_Lambda', 'L_lambda,peak * H_0^2'])
+smooth_x = np.linspace(min(z), max(z), 1000)
+ys = find_theoretical_m_eff(smooth_x, Omega_Lambda, LHH)
+
+fig6 = plt.figure(6).add_axes((0.1,0.32,0.74,0.68))
+plt.errorbar(z, m_eff, yerr=m_err, marker='o', color = 'k', elinewidth=1, ecolor='gray', linestyle='none', ms = 3)
+#plt.errorbar(near_redshift, near_m_effective, yerr = near_m_error, marker='s', color = 'orange', elinewidth=0.8, linestyle='none', ms = 2)
+plt.plot(smooth_x, ys, color = 'r', linewidth = 0.8)
+plt.ylabel('$M_{eff}$')
+plt.tick_params(axis='x', bottom=False, top=False, labelbottom=False)
+plt.xlim([0, 0.86])
+
+
+
+
+
+
+#fig, ax = plt.subplots(1,2,figsize=(16, 8))
+labels = ["Omega_Lambda", "LHH"]
+#for i in range(npar):
+#    ax = axes[i]
+#    ax.plot(chain[:,:, i], "k", alpha=0.3)
+#    ax.set_xlim(0, len(chain))
+#    ax.set_ylabel(labels[i])
+#    ax.yaxis.set_label_coords(-0.1, 0.5)
+
+tau = sampler.get_autocorr_time()
+print(tau)
+
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+print(flat_samples.shape)
+
+fig = corner.corner(flat_samples, labels=labels)
+
+#from IPython.display import display, Math
+
+#for i in range(npar):
+#    mcmc = np.percentile(flat_samples[:, i], [16, 50, 84])
+#    q = np.diff(mcmc)
+#    txt = "\mathrm{{{3}}} = {0:.3f}_{{-{1:.3f}}}^{{{2:.3f}}}"
+#    txt = txt.format(mcmc[1], q[0], q[1], labels[i])
+#    display(Math(txt))
+
+
+
+
 plt.show()
 
 

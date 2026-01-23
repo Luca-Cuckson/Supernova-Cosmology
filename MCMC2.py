@@ -56,7 +56,7 @@ nsteps = 5000
 p0 = np.array([0.68, 0.0019])
 
 
-stepwidth = np.array([0.06, 0.00007]) #hopefully can figure this one out
+stepwidth = np.array([0.08, 0.00009]) #hopefully can figure this one out
 
 #find log of likelihood, p0 is initial parameters
 def log_likelihood(p0, z, m_eff, m_err):
@@ -104,11 +104,17 @@ def mcmc(p0, z, m_eff, m_err, npar, nsteps, stepwidth):
 
 def nwalkers(mcmc_func, nwalkers, p0, z, m_eff, m_err, npar, nsteps, stepwidth):
     values = np.empty(nwalkers)
-
+    fig, ax = plt.subplots(npar,1,figsize=(16, 8), sharex=True)
+    ax[0].set_ylabel('Omega_Lambda')
+    ax[0].set_xlabel('Step')
+    ax[1].set_ylabel('L_lambda,peak * H_0^2')
+    ax[1].set_xlabel('Step')
     for i in range(nwalkers):
-        bchain = mcmc_func(p0, z, m_eff, m_err, npar, nsteps, stepwidth)[200:,:]
-        values[i] = np.mean(bchain[:,0])
-    return np.mean(values)
+        chain = mcmc_func(p0, z, m_eff, m_err, npar, nsteps, stepwidth)
+        values[i] = np.mean(chain[:,0])
+        ax[0].plot(chain[:,0])
+        ax[1].plot(chain[:,1])
+    return values, np.mean(values)
 
 
 #        #currently tutorial code, change it to what you like in a bit. just really wanna see if works
@@ -166,4 +172,6 @@ def nwalkers(mcmc_func, nwalkers, p0, z, m_eff, m_err, npar, nsteps, stepwidth):
 
 
 
-print(nwalkers(mcmc, 100, p0, z, m_eff, m_err, 2, 2000, stepwidth))
+print(nwalkers(mcmc, 3, p0, z, m_eff, m_err, 2, 2000, stepwidth))
+
+plt.show()
