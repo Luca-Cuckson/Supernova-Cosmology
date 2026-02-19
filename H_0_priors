@@ -1,0 +1,121 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.optimize 
+import scipy.integrate as integrate
+import scipy.stats as stats
+import corner
+import emcee
+import H_0 as degen
+import dataconstants as dac
+
+
+
+z, m_eff, m_err = dac.z, dac.m_eff, dac.m_err
+
+def find_theoretical_m_eff(z, *params):
+    L = params[1] * 10**32
+    H = params[2]
+    z_grid = np.linspace(0, np.max(z), 2000)
+    integrand = 1 / (np.sqrt((1-params[0]) * (1+z_grid)**3 + params[0]))
+    Integrals = integrate.cumulative_trapezoid(integrand, z_grid, initial=0)
+    I_interp = scipy.interpolate.make_interp_spline(z_grid, Integrals, k=3)
+    I_value = I_interp(z)
+
+    fracs = L * H**2 / ((dac.c**2) * (dac.f_lambda_0) * 4 * np.pi * ((1 + z) ** 2) * I_value**2)
+    return -2.5 * np.log10(fracs)
+
+def chi_squared(model_params, model, x_data, y_data, y_err):
+    return np.sum(((y_data - model(x_data, *model_params))/y_err)**2) # Note the `*model_params' here!
+
+    
+def lnprior(theta):
+    Omega, L, H_0 = theta
+    if 0<Omega<1 and 0<L<10 and 0<H_0:
+        a = -0.5 * ((Omega - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi))
+        b = -0.5 * ((H_0 - dac.H0_mu) / dac.H0_sigma)**2 - np.log(dac.H0_sigma * np.sqrt(2*np.pi))
+        return 0.0
+    else:
+        return -np.inf
+
+
+def log_likelihood(p0, z, m_eff, m_err):
+    return -0.5 * chi_squared(p0, find_theoretical_m_eff, z, m_eff, m_err)
+
+
+def lnprob(theta, x, y, yerr):
+    lp = lnprior(theta)
+    if not np.isfinite(lp):
+        return -np.inf
+    return lp + log_likelihood(theta, x, y, yerr)
+
+
+#######################################################################################################################################
+# Running the MCMC
+
+npar = 3 #number of parameters
+nsteps = 1800
+p0 = np.array([0.68, 3.2016, dac.H_0]) #chi-squared best-fit
+nwalkers = 8
+stepwidth = np.array([0.03, 0.0001, 1]) #hopefully can figure this one out
+
+starting_guesses = p0 + stepwidth * np.random.randn(nwalkers, npar) #have different starting pos. for each walker
+
+
+sampler = emcee.EnsembleSampler(nwalkers, npar, lnprob, args=(z, m_eff, m_err))
+
+pos, prob, state = sampler.run_mcmc(starting_guesses, nsteps, progress=True)
+
+chain = sampler.get_chain()
+
+print(sampler.acceptance_fraction)
+
+
+degen.walker_plot(chain)
+
+def get_values(chain):
+    Omega_chain = chain[:,:,0]
+    L_chain = chain[:,:,1]
+    H_chain = chain[:,:,2]
+    print('Omega_Lambda_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
+    print('L = ({} \u00B1 {})'.format(np.mean(L_chain), np.std(L_chain)))
+    print('H_0 = ({} \u00B1 {})'.format(np.mean(H_chain), np.std(H_chain)))
+    return np.mean(Omega_chain), np.mean(L_chain), np.mean(H_chain)
+
+Omega_Lambda, L, H_0 = get_values(chain)
+
+
+
+labels = ["Omega_Lambda", "L", "H_0"]
+
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+print(flat_samples.shape)
+
+figure = corner.corner(
+    flat_samples,
+    labels=labels,
+    quantiles=[0.16, 0.5, 0.84],
+    show_titles=True,
+    title_kwargs={"fontsize": 12},
+)
+
+axes = np.array(figure.axes).reshape((npar, npar))
+value1 = degen.get_values(chain)
+print(value1)
+
+for i in range(npar):
+    ax = axes[i, i]
+    ax.axvline(value1[i], color="g")
+
+# Loop over the histograms
+for yi in range(npar):
+    for xi in range(yi):
+        ax = axes[yi, xi]
+        ax.axvline(value1[xi], color="g")
+        ax.axhline(value1[yi], color="g")
+        ax.plot(value1[xi], value1[yi], "sg")
+
+
+plt.show()
+
+tau = sampler.get_autocorr_time()
+print(tau)
