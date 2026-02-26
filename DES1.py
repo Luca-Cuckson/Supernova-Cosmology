@@ -62,9 +62,9 @@ def lnprob(theta, x, y, yerr):
 # Running the MCMC
 
 npar = 2 #number of parameters
-nsteps = 3000
+nsteps = 1800
 p0 = np.array([0.68, H_0init]) #chi-squared best-fit
-nwalkers = 24
+nwalkers = 10
 stepwidth = np.array([0.06, 1]) #hopefully can figure this one out
 
 starting_guesses = p0 + stepwidth * np.random.randn(nwalkers, npar) #have different starting pos. for each walker

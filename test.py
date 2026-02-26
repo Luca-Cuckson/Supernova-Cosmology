@@ -17,3 +17,6 @@ def func2(n, m):
 a = [1,2,3,4,5,6,7,8,9]
 b = a[4:]
 print(b)
+
+
+print(np.array(a)+3)
