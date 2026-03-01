@@ -12,8 +12,9 @@ H_0init = 70 # km s Mpc^-1
 MBinit = -19.321
 
 # extract data from text file
-file = 'Union2.1_data2.txt'
+file = 'Union2.1_data3.txt'
 z, m_eff, m_err = np.loadtxt(file, usecols=(0,1,2), unpack=True)
+z, m_eff, m_err = z[551:], m_eff[551:], m_err[551:]
 
 
 #######################################################################################################################################
@@ -45,10 +46,10 @@ def log_likelihood(p0, z, m_eff, m_err):
 
 def lnprior(theta):
     Omega, MB, H_0 = theta
-    if 0<Omega<1 and -30<MB<-10 and 0<H_0:
+    if 0<Omega<1 and -30<MB<-10 and 0<H_0<125:
         a = -0.5 * ((Omega - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi))
         b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
-        return a+b
+        return 0.0
     else:
         return -np.inf
 
@@ -81,7 +82,7 @@ pos, prob, state = sampler.run_mcmc(starting_guesses, nsteps, progress=True)
 # Getting the results
 
 samples = sampler.flatchain
-print(samples)
+#print(samples)
 
 
 chain = sampler.get_chain()
@@ -97,10 +98,9 @@ def get_values(chain):
     H_chain = chain[:,:,2]
     H_chain = H_chain[burnin:]
     print('Omega_Lambda_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
-    print('L = ({} \u00B1 {})'.format(np.mean(MB_chain), np.std(MB_chain)))
+    print('MB = ({} \u00B1 {})'.format(np.mean(MB_chain), np.std(MB_chain)))
     print('H_0 = ({} \u00B1 {})'.format(np.mean(H_chain), np.std(H_chain)))
     return np.mean(Omega_chain), np.mean(MB_chain), np.mean(H_chain), np.std(Omega_chain), np.std(MB_chain), np.std(H_chain)
-
 
 #######################################################################################################################################
 # Plotting the results
@@ -127,6 +127,7 @@ def walker_plot(all_walker_chains):
         path = H_chain[:,i]
         ax2.plot(path)
         ax2.set_ylabel("H_0")
+    plt.savefig('Union2.1_walkerplot.svg', bbox_inches = 'tight')
 
 
 walker_plot(chain)
@@ -137,7 +138,7 @@ walker_plot(chain)
 
 Omega_Lambda, MB, H_0, Omega_Lambda_err, MB_err, H_0_err = get_values(chain)
 
-labels = ["$\\Omega_{\\Lambda}$", "$M_B$", "$H_0$ \mathrm{[$km\\ s^{-1}\\ Mpc^{-1}$]}"]
+labels = ["$\\Omega_{\\Lambda}$", "$M_B$", "$H_0$ [$km\\ s^{-1}\\ Mpc^{-1}$]"]
 means = [Omega_Lambda, MB, H_0]
 stds = [Omega_Lambda_err, MB_err, H_0_err]
 
@@ -163,9 +164,15 @@ def get_values2(chain):
     H_chain = H_chain[burnin:]
     return np.mean(Omega_chain), np.mean(MB_chain), np.mean(H_chain)
 
+
 axes = np.array(figure.axes).reshape((npar, npar))
 value1 = get_values2(chain)
-print(value1)
+print('This is a check:', value1) #this was a check
+chi2 = chi_squared(value1, find_theoretical_m_eff, z, m_eff, m_err)
+chi2_reduced = chi2 / (len(m_eff) - npar)
+print('Value $\chi^2$ = {}'.format(chi2))
+print('Value Reduced $\chi^2$ = {}'.format(chi2_reduced))
+
 
 for i in range(npar):
     ax = axes[i, i]
@@ -181,15 +188,20 @@ for yi in range(npar):
         ax.axhline(value1[yi], color="g")
         ax.plot(value1[xi], value1[yi], "sg")
 
-print(sampler.acceptance_fraction)
+plt.savefig('Union2.1_cornerplot.svg', bbox_inches = 'tight')
+
 
 #######################################################################################################################################
 # Plotting Hubble Diagram
 
 residuals = m_eff - find_theoretical_m_eff(z, Omega_Lambda, MB, H_0)
 norm_residuals = residuals / m_err
-
-gauss_xs = np.linspace(-5, 5, 1000)
+#####
+maxlim = np.max(z) + 0.1
+uplim = np.max(norm_residuals) + 0.5
+lowlim = np.min(norm_residuals) - 0.5
+#####
+gauss_xs = np.linspace(lowlim, uplim, 1000)
 norm_res_mean = np.mean(norm_residuals)
 norm_res_std = np.std(norm_residuals)
 
@@ -205,7 +217,7 @@ plt.errorbar(z, m_eff, yerr=m_err, marker='o', color = 'k', elinewidth=1, ecolor
 plt.plot(smooth_x, ys, color = 'r', linewidth = 0.8)
 plt.ylabel('$M_{eff}$')
 plt.tick_params(axis='x', bottom=False, top=False, labelbottom=False)
-plt.xlim([0, 0.86])
+plt.xlim([0, maxlim])
 
 #plt.text(0.5, 21, '$\chi^2_{min}=81.3$')
 #plt.text(0.5, 20.5, 'DoF = 41')
@@ -218,8 +230,8 @@ plt.axhline(y=0, color='k', linestyle = 'dashed', alpha=0.5)
 plt.axhline(y=1, color='k', linestyle=':', alpha=0.3)
 plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
 plt.xlabel('$Redshift (z)$')
-plt.ylim([-5.5,5.5])
-plt.xlim([0, 0.86])
+plt.ylim([lowlim, uplim])
+plt.xlim([0, maxlim])
 
 # Residuals histrogram
 plt.figure(6).add_axes((0.85, 0.1, 0.14, 0.2))

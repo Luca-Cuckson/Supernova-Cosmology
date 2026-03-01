@@ -12,7 +12,7 @@ z, m_eff, m_err = np.loadtxt(file, usecols=(1,2,3), unpack=True)
 
 # CMB constraints
 DE_mu = 0.6889
-DE_sigma = 0.0056 * 10 
+DE_sigma = 0.0056 * 10
 H0_mu = (67.66*1000)/(3.09*10**22) * 10**18
 H0_sigma = (0.42*1000)/(3.09*10**22) * 10**18 * 10
 
