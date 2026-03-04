@@ -18,3 +18,12 @@ H0_sigma = (0.42*1000)/(3.09*10**22) * 10**18 * 10
 
 H0_mu0 = 67.66
 H0_sigma0 = 0.42 * 10
+
+Omegak = 0.0007
+Omegak_err = 0.0019
+
+
+# Cepheif variable constraints
+MB_mu = -19.25
+MB_sigma = 0.03 * 10
+

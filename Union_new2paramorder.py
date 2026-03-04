@@ -22,13 +22,13 @@ z, m_eff, m_err = np.loadtxt(file, usecols=(0,1,2), unpack=True)
 
 def find_theoretical_m_eff(z, *params):
     z_grid = np.linspace(0, np.max(z), 2000)
-    integrand = 1 / (np.sqrt((1-params[0]) * (1+z_grid)**3 + params[0]))
+    integrand = 1 / (np.sqrt((1-params[1]) * (1+z_grid)**3 + params[1]))
     Integrals = integrate.cumulative_trapezoid(integrand, z_grid, initial=0)
     I_interp = scipy.interpolate.make_interp_spline(z_grid, Integrals, k=3)
     I_value = I_interp(z)
 
-    fracs = (1 + z) * c * I_value / params[2]
-    return 5 * np.log10(fracs) + 25 + params[1]
+    fracs = (1 + z) * c * I_value
+    return 5 * np.log10(fracs) + 25 + params[0]
 
 
 # chi-squared time!!!!!
@@ -45,12 +45,12 @@ def log_likelihood(p0, z, m_eff, m_err):
     return -0.5 * chi_squared(p0, find_theoretical_m_eff, z, m_eff, m_err)
 
 def lnprior(theta):
-    Omega, MB, H_0 = theta
-    if 0<Omega<1 and -30<MB<-10 and 50<H_0<100:
+    FunkyM, Omega  = theta
+    if 0<Omega<1 and -40<FunkyM<-20:
         a = -0.5 * ((Omega - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi))
-        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
-        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
-        return a+b+c
+#        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
+#        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
+        return 0.0
     else:
         return -np.inf
 
@@ -64,11 +64,11 @@ def lnprob(theta, x, y, yerr):
 #######################################################################################################################################
 # Running the MCMC
 
-npar = 3 #number of parameters
+npar = 2 #number of parameters
 nsteps = 3000
-p0 = np.array([0.68, MBinit, H_0init]) #chi-squared best-fit
-nwalkers = 24
-stepwidth = np.array([0.06, 0.015, 1]) #hopefully can figure this one out
+p0 = np.array([-28.5, 0.68]) #chi-squared best-fit
+nwalkers = 12
+stepwidth = np.array([0.03, 0.06]) #hopefully can figure this one out
 burnin = 300
 
 starting_guesses = p0 + stepwidth * np.random.randn(nwalkers, npar) #have different starting pos. for each walker
@@ -87,21 +87,18 @@ samples = sampler.flatchain
 
 
 chain = sampler.get_chain()
-Omega_chain = chain[:,:,0] #now have array of arrays of values for all walkers at each step
+Omega_chain = chain[:,:,1] #now have array of arrays of values for all walkers at each step
 
 print(sampler.acceptance_fraction)
 
 def get_values(chain):
-    Omega_chain = chain[:,:,0]
+    Omega_chain = chain[:,:,1]
     Omega_chain = Omega_chain[burnin:]
-    MB_chain = chain[:,:,1]
-    MB_chain = MB_chain[burnin:]
-    H_chain = chain[:,:,2]
-    H_chain = H_chain[burnin:]
+    FunkyM_chain = chain[:,:,0]
+    FunkyM_chain = FunkyM_chain[burnin:]
     print('Omega_Lambda_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
-    print('MB = ({} \u00B1 {})'.format(np.mean(MB_chain), np.std(MB_chain)))
-    print('H_0 = ({} \u00B1 {})'.format(np.mean(H_chain), np.std(H_chain)))
-    return np.mean(Omega_chain), np.mean(MB_chain), np.mean(H_chain), np.std(Omega_chain), np.std(MB_chain), np.std(H_chain)
+    print('FunkyM = ({} \u00B1 {})'.format(np.mean(FunkyM_chain), np.std(FunkyM_chain)))
+    return np.mean(FunkyM_chain), np.mean(Omega_chain), np.std(FunkyM_chain), np.std(Omega_chain)
 
 #######################################################################################################################################
 # Plotting the results
@@ -109,26 +106,20 @@ def get_values(chain):
 
 def walker_plot(all_walker_chains):
     fig, ax = plt.subplots(npar, 1, sharex=True)
-    Omega_chain = all_walker_chains[:,:,0]
-    L_chain = all_walker_chains[:,:,1]
-    H_chain = all_walker_chains[:,:,2]
-    ax0 = ax[0]
+    Omega_chain = all_walker_chains[:,:,1]
+    FunkyM_chain = all_walker_chains[:,:,0]
+    ax0 = ax[1]
     ax0.set_ylim(0,1)
     for i in range(nwalkers):
         path = Omega_chain[:,i]
         ax0.plot(path)
         ax0.set_ylabel("Omega_Lambda")
-    ax1 = ax[1]
+    ax1 = ax[0]
     for i in range(nwalkers):
-        path = L_chain[:,i]
+        path = FunkyM_chain[:,i]
         ax1.plot(path)
-        ax1.set_ylabel("MB")
-    ax2 = ax[2]
-    for i in range(nwalkers):
-        path = H_chain[:,i]
-        ax2.plot(path)
-        ax2.set_ylabel("H_0")
-    plt.savefig('Union2.1_walkerplot.svg', bbox_inches = 'tight')
+        ax1.set_ylabel("$M_B - 5log(H_0)$")
+    plt.savefig('Union2.2_walkerplot.svg', bbox_inches = 'tight')
 
 
 walker_plot(chain)
@@ -137,11 +128,11 @@ walker_plot(chain)
 ##################################
 
 
-Omega_Lambda, MB, H_0, Omega_Lambda_err, MB_err, H_0_err = get_values(chain)
+FunkyM, Omega_Lambda, FunkyM_err, Omega_Lambda_err = get_values(chain)
 
-labels = ["$\\Omega_{\\Lambda}$", "$M_B$", "$H_0$ [$km\\ s^{-1}\\ Mpc^{-1}$]"]
-means = [Omega_Lambda, MB, H_0]
-stds = [Omega_Lambda_err, MB_err, H_0_err]
+labels = ["$M_B - 5log(H_0)$", "$\\Omega_{\\Lambda}$"]
+means = [FunkyM, Omega_Lambda]
+stds = [FunkyM_err, Omega_Lambda_err]
 
 
 
@@ -157,13 +148,11 @@ figure = corner.corner(
 )
 
 def get_values2(chain):
-    Omega_chain = chain[:,:,0]
+    Omega_chain = chain[:,:,1]
     Omega_chain = Omega_chain[burnin:]
-    MB_chain = chain[:,:,1]
-    MB_chain = MB_chain[burnin:]
-    H_chain = chain[:,:,2]
-    H_chain = H_chain[burnin:]
-    return np.mean(Omega_chain), np.mean(MB_chain), np.mean(H_chain)
+    FunkyM_chain = chain[:,:,0]
+    FunkyM_chain = FunkyM_chain[burnin:]
+    return np.mean(FunkyM_chain), np.mean(Omega_chain)
 
 
 axes = np.array(figure.axes).reshape((npar, npar))
@@ -189,13 +178,13 @@ for yi in range(npar):
         ax.axhline(value1[yi], color="g")
         ax.plot(value1[xi], value1[yi], "sg")
 
-plt.savefig('Union2.1_cornerplot.svg', bbox_inches = 'tight')
+plt.savefig('Union2.2_cornerplot.svg', bbox_inches = 'tight')
 
 
 #######################################################################################################################################
 # Plotting Hubble Diagram
 
-residuals = m_eff - find_theoretical_m_eff(z, Omega_Lambda, MB, H_0)
+residuals = m_eff - find_theoretical_m_eff(z, FunkyM, Omega_Lambda)
 norm_residuals = residuals / m_err
 #####
 maxlim = np.max(z) + 0.1
@@ -208,7 +197,7 @@ norm_res_std = np.std(norm_residuals)
 
 # make smooth curve for theoretical value
 smooth_x = np.linspace(min(z), max(z), 1000)
-ys = find_theoretical_m_eff(smooth_x, Omega_Lambda, MB, H_0)
+ys = find_theoretical_m_eff(smooth_x, FunkyM, Omega_Lambda)
 
 plt.rcParams["font.size"] = 18
 
@@ -216,7 +205,7 @@ plt.rcParams["font.size"] = 18
 fig6 = plt.figure(6).add_axes((0.1,0.32,0.74,0.68))
 plt.errorbar(z, m_eff, yerr=m_err, marker='o', color = 'k', elinewidth=1, ecolor='gray', linestyle='none', ms = 3)
 plt.plot(smooth_x, ys, color = 'r', linewidth = 0.8)
-plt.ylabel('$M_{eff}$')
+plt.ylabel('$m_{eff}$')
 plt.tick_params(axis='x', bottom=False, top=False, labelbottom=False)
 plt.xlim([0, maxlim])
 
@@ -244,7 +233,7 @@ plt.plot(stats.norm.pdf(gauss_xs, norm_res_mean, norm_res_std), gauss_xs, color=
 plt.tick_params(axis='y', left=False, right=False, labelleft=False)
 plt.xticks([0.2, 0.4])
 
-plt.savefig('Union2.1_zplot.svg', bbox_inches = 'tight')
+plt.savefig('Union2.2_zplot.svg', bbox_inches = 'tight')
 
 
 
