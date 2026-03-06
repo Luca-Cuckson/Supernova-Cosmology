@@ -47,10 +47,11 @@ def log_likelihood(p0, z, m_eff, m_err):
 def lnprior(theta):
     FunkyM, Omega, w  = theta
     if 0<Omega<1 and -40<FunkyM<-20 and -2<w<0:
-        a = -0.5 * ((Omega - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi))
+#        a = -0.5 * ((Omega - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi))
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
-        return 0.0
+        f = -0.5 * ((w - dac.w_mu) / dac.w_sigma)**2 - np.log(dac.w_sigma * np.sqrt(2*np.pi))
+        return f
     else:
         return -np.inf
 
@@ -66,8 +67,8 @@ def lnprob(theta, x, y, yerr):
 
 npar = 3 #number of parameters
 nsteps = 4000
-p0 = np.array([-28.5, 0.68, -1]) #chi-squared best-fit
-nwalkers = 16
+p0 = np.array([-28.5, 0.3, -1]) #chi-squared best-fit
+nwalkers = 24
 stepwidth = np.array([0.03, 0.06, 0.06]) #hopefully can figure this one out
 burnin = 300
 
@@ -98,7 +99,7 @@ def get_values(chain):
     FunkyM_chain = FunkyM_chain[burnin:]
     w_chain = chain[:,:,2]
     w_chain = w_chain[burnin:]
-    print('Omega_Lambda_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
+    print('Omega_m_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
     print('FunkyM = ({} \u00B1 {})'.format(np.mean(FunkyM_chain), np.std(FunkyM_chain)))
     print('w = ({} \u00B1 {})'.format(np.mean(w_chain), np.std(w_chain)))
     return np.mean(FunkyM_chain), np.mean(Omega_chain), np.mean(w_chain), np.std(FunkyM_chain), np.std(Omega_chain), np.std(w_chain)
@@ -117,7 +118,7 @@ def walker_plot(all_walker_chains):
     for i in range(nwalkers):
         path = Omega_chain[:,i]
         ax0.plot(path)
-        ax0.set_ylabel("Omega_Lambda")
+        ax0.set_ylabel("$Omega_{m}$")
     ax1 = ax[0]
     for i in range(nwalkers):
         path = FunkyM_chain[:,i]
@@ -139,7 +140,7 @@ walker_plot(chain)
 
 FunkyM, Omega_Lambda, w, FunkyM_err, Omega_Lambda_err, w_err = get_values(chain)
 
-labels = ["$M_B - 5log(H_0)$", "$\\Omega_{\\Lambda}$", "$w$"]
+labels = ["$M_B - 5log(H_0)$", "$\\Omega_{m}$", "$w$"]
 means = [FunkyM, Omega_Lambda, w]
 stds = [FunkyM_err, Omega_Lambda_err, w_err]
 

@@ -13,6 +13,10 @@ z, m_eff, m_err = np.loadtxt(file, usecols=(1,2,3), unpack=True)
 # CMB constraints
 DE_mu = 0.6889
 DE_sigma = 0.0056 * 10
+
+Omegam_mu = 1 - DE_mu
+Omegam_sigma = DE_sigma
+
 H0_mu = (67.66*1000)/(3.09*10**22) * 10**18
 H0_sigma = (0.42*1000)/(3.09*10**22) * 10**18 * 10
 
@@ -20,7 +24,10 @@ H0_mu0 = 67.66
 H0_sigma0 = 0.42 * 10
 
 Omegak = 0.0007
-Omegak_err = 0.0019
+Omegak_err = 0.0019 * 10
+
+w_mu = -1.028
+w_sigma = 0.031 * 5
 
 
 # Cepheif variable constraints

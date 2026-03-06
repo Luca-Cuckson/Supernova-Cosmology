@@ -20,3 +20,9 @@ print(b)
 
 
 print(np.array(a)+3)
+
+z = [0.01, 0.3, 0.4, 0.5]
+
+minlim = np.min([np.min(z) - 0.1, 0])
+
+print(minlim)

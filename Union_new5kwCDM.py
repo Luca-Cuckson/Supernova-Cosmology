@@ -20,16 +20,31 @@ z, m_eff, m_err = np.loadtxt(file, usecols=(0,1,2), unpack=True)
 #######################################################################################################################################
 # Find theoretical values
 
+#def find_theoretical_m_eff(z, *params):
+#    z_grid = np.linspace(0, np.max(z), 2000)
+#    integrand = 1 / (np.sqrt((params[1]) * (1+z_grid)**3 + params[2] * (1+z_grid)**2 + (1-params[1]-params[2])))
+#    Integrals = integrate.cumulative_trapezoid(integrand, z_grid, initial=0)
+#    I_interp = scipy.interpolate.make_interp_spline(z_grid, Integrals, k=3)
+#    I_value = I_interp(z)
+#
+#    d_L_ish = (1+z) * c * np.sinh(np.sqrt(params[2]) * I_value) / np.sqrt(params[2])
+#    return 5 * np.log10(d_L_ish) + 25 + params[0]
+
 def find_theoretical_m_eff(z, *params):
+    Omegak = params[2]
     z_grid = np.linspace(0, np.max(z), 2000)
-    integrand = 1 / (np.sqrt((params[1]) * (1+z_grid)**3 + (1-params[1])))
+    integrand = 1 / (np.sqrt((params[1]) * (1+z_grid)**3 + params[2] * (1+z_grid)**2 + (1-params[1]-params[2])* (1+z_grid)**(3*(1+params[3]))))
     Integrals = integrate.cumulative_trapezoid(integrand, z_grid, initial=0)
     I_interp = scipy.interpolate.make_interp_spline(z_grid, Integrals, k=3)
     I_value = I_interp(z)
-
-    fracs = (1 + z) * c * I_value
-    return 5 * np.log10(fracs) + 25 + params[0]
-
+    
+    if Omegak>0:
+        d_Lish = (1+z) * c * np.sinh(np.sqrt(params[2]) * I_value) / (np.sqrt(params[2]))
+    if Omegak==0:
+        d_Lish = (1+z) * c * I_value 
+    if Omegak<0:
+        d_Lish = (1+z) * c * np.sin(np.sqrt(-Omegak) * I_value) / (np.sqrt(-Omegak))
+    return 5*np.log10(d_Lish) + 25 + params[0]
 
 # chi-squared time!!!!!
 def chi_squared(model_params, model, x_data, y_data, y_err):
@@ -45,12 +60,17 @@ def log_likelihood(p0, z, m_eff, m_err):
     return -0.5 * chi_squared(p0, find_theoretical_m_eff, z, m_eff, m_err)
 
 def lnprior(theta):
-    FunkyM, Omega  = theta
-    if 0<Omega<1 and -40<FunkyM<-20:
-        a = -0.5 * ((Omega - dac.Omegam_mu) / dac.Omegam_sigma)**2 - np.log(dac.Omegam_sigma * np.sqrt(2*np.pi))
+    FunkyM, Omegam, Omegak, w = theta
+    z_test = z_grid = np.linspace(0, np.max(z), 2000)
+    if np.any(Omegam*(1+z_test)**3 + Omegak*(1+z_test)**2 + (1 - Omegam - Omegak) <= 0):
+        return -np.inf
+
+    if 0<Omegam and -40<FunkyM<-20 and -0.5<Omegak<0.5 and -2<w<0:
+#        a = -0.5 * ((Omegam - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi)) # Current prior is in Omega_Lambda!!!
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
-        return a
+        d = -0.5 * ((Omegak - dac.Omegak) / dac.Omegak_err)**2 - np.log(dac.Omegak_err * np.sqrt(2*np.pi))
+        return d
     else:
         return -np.inf
 
@@ -64,11 +84,11 @@ def lnprob(theta, x, y, yerr):
 #######################################################################################################################################
 # Running the MCMC
 
-npar = 2 #number of parameters
+npar = 4 #number of parameters
 nsteps = 4000
-p0 = np.array([-28.5, 0.3]) #chi-squared best-fit
-nwalkers = 24
-stepwidth = np.array([0.03, 0.06]) #hopefully can figure this one out
+p0 = np.array([-28.5, 0.3, 0.001, -1]) #chi-squared best-fit
+nwalkers = 16
+stepwidth = np.array([0.03, 0.06, 0.0003, 0.06]) #hopefully can figure this one out
 burnin = 300
 
 starting_guesses = p0 + stepwidth * np.random.randn(nwalkers, npar) #have different starting pos. for each walker
@@ -96,9 +116,15 @@ def get_values(chain):
     Omega_chain = Omega_chain[burnin:]
     FunkyM_chain = chain[:,:,0]
     FunkyM_chain = FunkyM_chain[burnin:]
+    Omegak_chain = chain[:,:,2]
+    Omegak_chain = Omegak_chain[burnin:]
+    w_chain = chain[:,:,3]
+    w_chain = w_chain[burnin:]
     print('Omega_m_0 = ({} \u00B1 {})'.format(np.mean(Omega_chain), np.std(Omega_chain)))
     print('FunkyM = ({} \u00B1 {})'.format(np.mean(FunkyM_chain), np.std(FunkyM_chain)))
-    return np.mean(FunkyM_chain), np.mean(Omega_chain), np.std(FunkyM_chain), np.std(Omega_chain)
+    print('Omega_k_0 = ({} \u00B1 {})'.format(np.mean(Omegak_chain), np.std(Omegak_chain)))
+    print('w = ({} \u00B1 {})'.format(np.mean(w_chain), np.std(w_chain)))
+    return np.mean(FunkyM_chain), np.mean(Omega_chain), np.mean(Omegak_chain), np.mean(w_chain), np.std(FunkyM_chain), np.std(Omega_chain), np.std(Omegak_chain), np.std(w_chain)
 
 #######################################################################################################################################
 # Plotting the results
@@ -108,18 +134,30 @@ def walker_plot(all_walker_chains):
     fig, ax = plt.subplots(npar, 1, sharex=True)
     Omega_chain = all_walker_chains[:,:,1]
     FunkyM_chain = all_walker_chains[:,:,0]
+    Omegak_chain = all_walker_chains[:,:,2]
+    w_chain = all_walker_chains[:,:,3]
     ax0 = ax[1]
-    ax0.set_ylim(0,1)
+    #ax0.set_ylim(0,np.max(Omega_chain))
     for i in range(nwalkers):
         path = Omega_chain[:,i]
         ax0.plot(path)
-        ax0.set_ylabel("$Omega_m$")
+        ax0.set_ylabel("$\\Omega_{m}$")
     ax1 = ax[0]
     for i in range(nwalkers):
         path = FunkyM_chain[:,i]
         ax1.plot(path)
         ax1.set_ylabel("$M_B - 5log(H_0)$")
-    plt.savefig('Union2.2_walkerplot.svg', bbox_inches = 'tight')
+    ax2 = ax[2]
+    for i in range(nwalkers):
+        path = Omegak_chain[:,i]
+        ax2.plot(path)
+        ax2.set_ylabel("$\\Omega_{k}$")
+    ax3 = ax[3]
+    for i in range(nwalkers):
+        path = w_chain[:,i]
+        ax3.plot(path)
+        ax3.set_ylabel("w")
+    plt.savefig('Union2.5_walkerplot.svg', bbox_inches = 'tight')
 
 
 walker_plot(chain)
@@ -128,11 +166,11 @@ walker_plot(chain)
 ##################################
 
 
-FunkyM, Omega_Lambda, FunkyM_err, Omega_Lambda_err = get_values(chain)
+FunkyM, Omega_Lambda, Omegak, w, FunkyM_err, Omega_Lambda_err, Omegak_err, w_err = get_values(chain)
 
-labels = ["$M_B - 5log(H_0)$", "$\\Omega_{m}$"]
-means = [FunkyM, Omega_Lambda]
-stds = [FunkyM_err, Omega_Lambda_err]
+labels = ["$M_B - 5log(H_0)$", "$\\Omega_{m}$", "$\\Omega_k$", "$w$"]
+means = [FunkyM, Omega_Lambda, Omegak, w]
+stds = [FunkyM_err, Omega_Lambda_err, Omegak_err, w_err]
 
 
 
@@ -152,7 +190,11 @@ def get_values2(chain):
     Omega_chain = Omega_chain[burnin:]
     FunkyM_chain = chain[:,:,0]
     FunkyM_chain = FunkyM_chain[burnin:]
-    return np.mean(FunkyM_chain), np.mean(Omega_chain)
+    Omegak_chain = chain[:,:,2]
+    Omegak_chain = Omegak_chain[burnin:]
+    w_chain = chain[:,:,3]
+    w_chain = w_chain[burnin:]
+    return np.mean(FunkyM_chain), np.mean(Omega_chain), np.mean(Omegak_chain), np.mean(w_chain)
 
 
 axes = np.array(figure.axes).reshape((npar, npar))
@@ -178,18 +220,19 @@ for yi in range(npar):
         ax.axhline(value1[yi], color="g")
         ax.plot(value1[xi], value1[yi], "sg")
 
-plt.savefig('Union2.2_cornerplot.svg', bbox_inches = 'tight')
+plt.savefig('Union2.5_cornerplot.svg', bbox_inches = 'tight')
 
 
 #######################################################################################################################################
 # Plotting Hubble Diagram
 
-residuals = m_eff - find_theoretical_m_eff(z, FunkyM, Omega_Lambda)
+residuals = m_eff - find_theoretical_m_eff(z, FunkyM, Omega_Lambda, Omegak, w)
 norm_residuals = residuals / m_err
 #####
 maxlim = np.max(z) + 0.1
-uplim = np.max(norm_residuals) + 0.5
-lowlim = np.min(norm_residuals) - 0.5
+minlim = np.max([np.min(z) - 0.1, 0])
+uplim = np.max(norm_residuals) + 0.15
+lowlim = np.min(norm_residuals) - 0.15
 #####
 gauss_xs = np.linspace(lowlim, uplim, 1000)
 norm_res_mean = np.mean(norm_residuals)
@@ -197,7 +240,7 @@ norm_res_std = np.std(norm_residuals)
 
 # make smooth curve for theoretical value
 smooth_x = np.linspace(min(z), max(z), 1000)
-ys = find_theoretical_m_eff(smooth_x, FunkyM, Omega_Lambda)
+ys = find_theoretical_m_eff(smooth_x, FunkyM, Omega_Lambda, Omegak, w)
 
 plt.rcParams["font.size"] = 18
 
@@ -207,7 +250,7 @@ plt.errorbar(z, m_eff, yerr=m_err, marker='o', color = 'k', elinewidth=1, ecolor
 plt.plot(smooth_x, ys, color = 'r', linewidth = 0.8)
 plt.ylabel('$m_{eff}$')
 plt.tick_params(axis='x', bottom=False, top=False, labelbottom=False)
-plt.xlim([0, maxlim])
+plt.xlim([minlim, maxlim])
 
 #plt.text(0.5, 21, '$\chi^2_{min}=81.3$')
 #plt.text(0.5, 20.5, 'DoF = 41')
@@ -221,7 +264,7 @@ plt.axhline(y=1, color='k', linestyle=':', alpha=0.3)
 plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
 plt.xlabel('$Redshift (z)$')
 plt.ylim([lowlim, uplim])
-plt.xlim([0, maxlim])
+plt.xlim([minlim, maxlim])
 
 # Residuals histrogram
 plt.figure(6).add_axes((0.85, 0.1, 0.14, 0.2))
@@ -232,8 +275,9 @@ plt.axhline(y=-1, color='k', linestyle=':', alpha=0.3)
 plt.plot(stats.norm.pdf(gauss_xs, norm_res_mean, norm_res_std), gauss_xs, color='k')
 plt.tick_params(axis='y', left=False, right=False, labelleft=False)
 plt.xticks([0.2, 0.4])
+plt.xlim([lowlim, uplim])
 
-plt.savefig('Union2.2_zplot.svg', bbox_inches = 'tight')
+plt.savefig('Union2.5_zplot.svg', bbox_inches = 'tight')
 
 
 
