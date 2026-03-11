@@ -28,7 +28,7 @@ def find_theoretical_m_eff(z, *params):
     I_value = I_interp(z)
 
     fracs = (1 + z) * c * I_value
-    return 5 * np.log10(fracs) + 25 + params[0]
+    return 5 * np.log10(fracs) + 15 + params[0]
 
 
 # chi-squared time!!!!!
@@ -46,11 +46,11 @@ def log_likelihood(p0, z, m_eff, m_err):
 
 def lnprior(theta):
     FunkyM, Omega  = theta
-    if 0<Omega<1 and -40<FunkyM<-20:
+    if 0<Omega<1 and -30<FunkyM<-10:
         a = -0.5 * ((Omega - dac.Omegam_mu) / dac.Omegam_sigma)**2 - np.log(dac.Omegam_sigma * np.sqrt(2*np.pi))
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
-        return a
+        return 0.0
     else:
         return -np.inf
 
@@ -65,9 +65,9 @@ def lnprob(theta, x, y, yerr):
 # Running the MCMC
 
 npar = 2 #number of parameters
-nsteps = 4000
-p0 = np.array([-28.5, 0.3]) #chi-squared best-fit
-nwalkers = 24
+nsteps = 3000
+p0 = np.array([-18.5, 0.3]) #chi-squared best-fit
+nwalkers = 16
 stepwidth = np.array([0.03, 0.06]) #hopefully can figure this one out
 burnin = 300
 
@@ -118,7 +118,7 @@ def walker_plot(all_walker_chains):
     for i in range(nwalkers):
         path = FunkyM_chain[:,i]
         ax1.plot(path)
-        ax1.set_ylabel("$M_B - 5log(H_0)$")
+        ax1.set_ylabel("$M_B - 5log(h)$")
     plt.savefig('Union2.2_walkerplot.svg', bbox_inches = 'tight')
 
 
@@ -130,7 +130,7 @@ walker_plot(chain)
 
 FunkyM, Omega_Lambda, FunkyM_err, Omega_Lambda_err = get_values(chain)
 
-labels = ["$M_B - 5log(H_0)$", "$\\Omega_{m}$"]
+labels = ["$M_B - 5log(h)$", "$\\Omega_{m}$"]
 means = [FunkyM, Omega_Lambda]
 stds = [FunkyM_err, Omega_Lambda_err]
 
@@ -138,6 +138,7 @@ stds = [FunkyM_err, Omega_Lambda_err]
 
 flat_samples = sampler.get_chain(discard=burnin, thin=15, flat=True)
 print(flat_samples.shape)
+np.savetxt('LCDM_no_prior.txt', flat_samples)
 
 figure = corner.corner(
     flat_samples,

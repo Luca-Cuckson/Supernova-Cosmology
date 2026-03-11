@@ -44,7 +44,7 @@ def find_theoretical_m_eff(z, *params):
         d_Lish = (1+z) * c * I_value 
     if Omegak<0:
         d_Lish = (1+z) * c * np.sin(np.sqrt(-Omegak) * I_value) / (np.sqrt(-Omegak))
-    return 5*np.log10(d_Lish) + 25 + params[0]
+    return 5*np.log10(d_Lish) + 15 + params[0]
 
 # chi-squared time!!!!!
 def chi_squared(model_params, model, x_data, y_data, y_err):
@@ -65,12 +65,12 @@ def lnprior(theta):
     if np.any(Omegam*(1+z_test)**3 + Omegak*(1+z_test)**2 + (1 - Omegam - Omegak) <= 0):
         return -np.inf
 
-    if 0<Omegam and -40<FunkyM<-20 and -0.5<Omegak<0.5:
+    if 0<Omegam and -30<FunkyM<-10 and -0.5<Omegak<0.5:
 #        a = -0.5 * ((Omegam - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi)) # Current prior is in Omega_Lambda!!!
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
         d = -0.5 * ((Omegak - dac.Omegak) / dac.Omegak_err)**2 - np.log(dac.Omegak_err * np.sqrt(2*np.pi))
-        return 0.0
+        return d
     else:
         return -np.inf
 
@@ -86,7 +86,7 @@ def lnprob(theta, x, y, yerr):
 
 npar = 3 #number of parameters
 nsteps = 4000
-p0 = np.array([-28.5, 0.3, 0.001]) #chi-squared best-fit
+p0 = np.array([-18.5, 0.3, 0.001]) #chi-squared best-fit
 nwalkers = 24
 stepwidth = np.array([0.03, 0.06, 0.0003]) #hopefully can figure this one out
 burnin = 300
@@ -142,7 +142,7 @@ def walker_plot(all_walker_chains):
     for i in range(nwalkers):
         path = FunkyM_chain[:,i]
         ax1.plot(path)
-        ax1.set_ylabel("$M_B - 5log(H_0)$")
+        ax1.set_ylabel("$M_B - 5log(h)$")
     ax2 = ax[2]
     for i in range(nwalkers):
         path = Omegak_chain[:,i]
@@ -159,7 +159,7 @@ walker_plot(chain)
 
 FunkyM, Omega_Lambda, Omegak, FunkyM_err, Omega_Lambda_err, Omegak_err = get_values(chain)
 
-labels = ["$M_B - 5log(H_0)$", "$\\Omega_{m}$", "$\\Omega_k$"]
+labels = ["$M_B - 5log(h)$", "$\\Omega_{m}$", "$\\Omega_k$"]
 means = [FunkyM, Omega_Lambda, Omegak]
 stds = [FunkyM_err, Omega_Lambda_err, Omegak_err]
 
@@ -167,6 +167,8 @@ stds = [FunkyM_err, Omega_Lambda_err, Omegak_err]
 
 flat_samples = sampler.get_chain(discard=burnin, thin=15, flat=True)
 print(flat_samples.shape)
+np.savetxt('LCDM_curved_prior.txt', flat_samples)
+#########################################################
 
 figure = corner.corner(
     flat_samples,
