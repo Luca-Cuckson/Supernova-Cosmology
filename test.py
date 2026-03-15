@@ -26,3 +26,8 @@ z = [0.01, 0.3, 0.4, 0.5]
 minlim = np.min([np.min(z) - 0.1, 0])
 
 print(minlim)
+
+file = 'Union2.1_data3.txt'
+z, m_eff, m_err = np.loadtxt(file, usecols=(0,1,2), unpack=True)
+
+print(np.max(z))

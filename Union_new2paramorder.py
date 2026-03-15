@@ -50,7 +50,7 @@ def lnprior(theta):
         a = -0.5 * ((Omega - dac.Omegam_mu) / dac.Omegam_sigma)**2 - np.log(dac.Omegam_sigma * np.sqrt(2*np.pi))
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
-        return 0.0
+        return a
     else:
         return -np.inf
 
@@ -65,9 +65,9 @@ def lnprob(theta, x, y, yerr):
 # Running the MCMC
 
 npar = 2 #number of parameters
-nsteps = 3000
+nsteps = 4000
 p0 = np.array([-18.5, 0.3]) #chi-squared best-fit
-nwalkers = 16
+nwalkers = 24
 stepwidth = np.array([0.03, 0.06]) #hopefully can figure this one out
 burnin = 300
 
@@ -138,7 +138,7 @@ stds = [FunkyM_err, Omega_Lambda_err]
 
 flat_samples = sampler.get_chain(discard=burnin, thin=15, flat=True)
 print(flat_samples.shape)
-np.savetxt('LCDM_no_prior.txt', flat_samples)
+np.savetxt('LCDM_prior.txt', flat_samples)
 
 figure = corner.corner(
     flat_samples,

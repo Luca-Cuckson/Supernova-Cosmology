@@ -26,8 +26,8 @@ H0_sigma0 = 0.42 * 10
 Omegak = 0.0007
 Omegak_err = 0.0019 * 10
 
-w_mu = -1.028
-w_sigma = 0.031 * 5
+w_mu = -1.04
+w_sigma = 0.1 
 
 
 # Cepheif variable constraints

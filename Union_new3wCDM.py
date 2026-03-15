@@ -51,7 +51,7 @@ def lnprior(theta):
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
         f = -0.5 * ((w - dac.w_mu) / dac.w_sigma)**2 - np.log(dac.w_sigma * np.sqrt(2*np.pi))
-        return 0.0
+        return f
     else:
         return -np.inf
 
@@ -148,7 +148,7 @@ stds = [FunkyM_err, Omega_Lambda_err, w_err]
 
 flat_samples = sampler.get_chain(discard=burnin, thin=15, flat=True)
 print(flat_samples.shape)
-np.savetxt('wCDM_no_prior.txt', flat_samples)
+np.savetxt('wCDM_prior.txt', flat_samples)
 
 figure = corner.corner(
     flat_samples,
