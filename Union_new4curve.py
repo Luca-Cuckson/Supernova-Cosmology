@@ -65,12 +65,12 @@ def lnprior(theta):
     if np.any(Omegam*(1+z_test)**3 + Omegak*(1+z_test)**2 + (1 - Omegam - Omegak) <= 0):
         return -np.inf
 
-    if 0<Omegam and -30<FunkyM<-10 and -0.5<Omegak<0.5:
+    if 0<Omegam and -30<FunkyM<-10 and -0.8<Omegak<0.8:
 #        a = -0.5 * ((Omegam - dac.DE_mu) / dac.DE_sigma)**2 - np.log(dac.DE_sigma * np.sqrt(2*np.pi)) # Current prior is in Omega_Lambda!!!
 #        b = -0.5 * ((H_0 - dac.H0_mu0) / dac.H0_sigma0)**2 - np.log(dac.H0_sigma0 * np.sqrt(2*np.pi))
 #        c = -0.5 * ((MB - dac.MB_mu) / dac.MB_sigma)**2 - np.log(dac.MB_sigma * np.sqrt(2*np.pi))
         d = -0.5 * ((Omegak - dac.Omegak) / dac.Omegak_err)**2 - np.log(dac.Omegak_err * np.sqrt(2*np.pi))
-        return d
+        return 0.0
     else:
         return -np.inf
 
@@ -85,9 +85,9 @@ def lnprob(theta, x, y, yerr):
 # Running the MCMC
 
 npar = 3 #number of parameters
-nsteps = 4000
+nsteps = 5000
 p0 = np.array([-18.5, 0.3, 0.001]) #chi-squared best-fit
-nwalkers = 24
+nwalkers = 50
 stepwidth = np.array([0.03, 0.06, 0.0003]) #hopefully can figure this one out
 burnin = 300
 
@@ -108,6 +108,7 @@ samples = sampler.flatchain
 
 chain = sampler.get_chain()
 Omega_chain = chain[:,:,1] #now have array of arrays of values for all walkers at each step
+Omegak_chain = chain[:,:,2]
 
 print(sampler.acceptance_fraction)
 
@@ -122,6 +123,9 @@ def get_values(chain):
     print('FunkyM = ({} \u00B1 {})'.format(np.mean(FunkyM_chain), np.std(FunkyM_chain)))
     print('Omega_k_0 = ({} \u00B1 {})'.format(np.mean(Omegak_chain), np.std(Omegak_chain)))
     return np.mean(FunkyM_chain), np.mean(Omega_chain), np.mean(Omegak_chain), np.std(FunkyM_chain), np.std(Omega_chain), np.std(Omegak_chain)
+
+lower, median, upper = np.percentile(Omegak_chain, [15.87, 50, 84.13])
+print(f"Omega_k: {median:.3f} (+{upper-median:.3f} / -{median-lower:.3f})")
 
 #######################################################################################################################################
 # Plotting the results
@@ -167,7 +171,7 @@ stds = [FunkyM_err, Omega_Lambda_err, Omegak_err]
 
 flat_samples = sampler.get_chain(discard=burnin, thin=15, flat=True)
 print(flat_samples.shape)
-np.savetxt('LCDM_curved_prior.txt', flat_samples)
+#np.savetxt('LCDM_curved_no_prior.txt', flat_samples)
 #########################################################
 
 figure = corner.corner(

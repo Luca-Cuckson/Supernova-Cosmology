@@ -26,3 +26,10 @@ def find_theoretical_m_eff(z, *params):
 
 
 print(find_theoretical_m_eff(1, -29, 0.286, 0))
+
+
+file = 'Union2.1_data3.txt'
+z, m_eff, m_err = np.loadtxt(file, usecols=(0,1,2), unpack=True)
+
+print(np.max(z))
+print(np.min(z))
